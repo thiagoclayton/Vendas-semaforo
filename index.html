@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Vendas Semáforo</title>
+<style>
+:root{--bg:#f4f6f8;--card:#fff;--text:#111827;--muted:#6b7280;--primary:#111827;--green:#16a34a;--red:#dc2626;--line:#e5e7eb}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+header{background:var(--primary);color:#fff;padding:22px 18px 18px;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:23px} header p{margin:4px 0 0;color:#cbd5e1;font-size:13px}
+main{max-width:720px;margin:auto;padding:16px 14px 100px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px #00000008}
+.timer{text-align:center;padding:20px}.time{font-size:52px;font-weight:800;letter-spacing:1px;margin:8px 0 16px}.status{font-size:13px;color:var(--muted);margin-bottom:14px}
+button{border:0;border-radius:13px;padding:13px 16px;font-weight:700;font-size:15px;cursor:pointer}
+.primary{background:var(--primary);color:white;width:100%}.green{background:var(--green);color:white}.red{background:var(--red);color:white}.secondary{background:#eef2f7;color:#111827}
+.row{display:flex;gap:9px;align-items:center}.row>*{flex:1}
+label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin:10px 0 5px}
+input,select{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:11px;font-size:15px;background:#fff}
+.product{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding:11px 0}
+.product:last-child{border-bottom:0}.qty{font-size:18px;font-weight:800;min-width:34px;text-align:center}.mini{padding:9px 12px;border-radius:10px}
+h2{font-size:17px;margin:0 0 10px}.muted{color:var(--muted);font-size:13px}.big{font-size:27px;font-weight:800}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{background:#f8fafc;border-radius:13px;padding:12px}.metric span{display:block;color:var(--muted);font-size:12px}.metric b{font-size:19px}
+.session{padding:12px 0;border-bottom:1px solid var(--line)}.session:last-child{border:0}.session-head{display:flex;justify-content:space-between;font-weight:750}
+.empty{text-align:center;color:var(--muted);padding:25px 5px}.danger-link{color:var(--red);background:none;padding:8px;font-size:12px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;z-index:10;padding:8px env(safe-area-inset-right) calc(8px + env(safe-area-inset-bottom)) env(safe-area-inset-left)}
+nav button{background:none;color:var(--muted);font-size:12px;flex:1;max-width:180px}.active{color:#111827!important;font-weight:800}
+.hidden{display:none!important}
+.note{background:#eff6ff;border-radius:12px;padding:11px;font-size:12px;color:#1e3a8a;margin-top:10px}
+</style>
+</head>
+<body>
+<header><h1>Vendas Semáforo</h1><p>Controle suas sessões, produtos e resultados</p></header>
+<main>
+<section id="home">
+<div class="card timer">
+<div class="status" id="status">Você ainda não iniciou uma venda</div>
+<div class="time" id="timer">00:00:00</div>
+<div class="row">
+<button class="green" id="startBtn" onclick="startSession()">▶ Iniciar</button>
+<button class="secondary" id="pauseBtn" onclick="togglePause()" disabled>Ⅱ Pausar</button>
+</div>
+<div style="margin-top:10px"><button class="red" id="finishBtn" onclick="finishSession()" disabled>Finalizar venda</button></div>
+</div>
+
+<div class="card">
+<h2>Produtos vendidos nesta sessão</h2>
+<div id="productList"></div>
+<button class="secondary" onclick="showAddProduct()" style="width:100%;margin-top:10px">＋ Adicionar produto</button>
+<div id="addBox" class="hidden">
+<label>Produto</label><input id="newProduct" placeholder="Ex.: Trufa de Oreo">
+<label>Preço de venda (R$)</label><input id="newPrice" type="number" step="0.01" min="0" placeholder="5,00">
+<button class="primary" onclick="addProduct()">Adicionar</button>
+</div>
+</div>
+
+<div class="card">
+<h2>Resumo de hoje</h2>
+<div class="grid">
+<div class="metric"><span>Faturamento</span><b id="todayRevenue">R$ 0,00</b></div>
+<div class="metric"><span>Horas vendendo</span><b id="todayHours">0h 00m</b></div>
+<div class="metric"><span>Produtos</span><b id="todayItems">0</b></div>
+<div class="metric"><span>Faturamento/h</span><b id="todayPerHour">R$ 0,00</b></div>
+</div>
+</div>
+</section>
+
+<section id="history" class="hidden">
+<div class="card"><h2>Histórico de sessões</h2><div id="historyList"></div></div>
+<div class="card"><button class="danger-link" onclick="clearHistory()">Apagar todo o histórico</button></div>
+</section>
+
+<section id="products" class="hidden">
+<div class="card">
+<h2>Meus produtos</h2>
+<p class="muted">Os produtos ficam salvos neste aparelho.</p>
+<div id="catalog"></div>
+<div class="note">Nesta primeira versão, os dados ficam armazenados localmente no seu iPhone. Depois podemos adicionar backup/sincronização.</div>
+</div>
+</section>
+</main>
+<nav>
+<button class="active" onclick="tab('home',this)">🏠<br>Início</button>
+<button onclick="tab('history',this)">📊<br>Histórico</button>
+<button onclick="tab('products',this)">📦<br>Produtos</button>
+</nav>
+
+<script>
+const KEY='vendasSemaforoV1';
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ products:[
+  {id:crypto.randomUUID(),name:'Tortinha',price:5},
+  {id:crypto.randomUUID(),name:'Kit Mentos',price:12},
+  {id:crypto.randomUUID(),name:'Batidinha de maracujá',price:10},
+  {id:crypto.randomUUID(),name:'Trufa',price:5}
+ ],
+ sessions:[]
+};
+let active=null, interval=null;
+
+function save(){localStorage.setItem(KEY,JSON.stringify(db));}
+function money(v){return (Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function fmtTime(s){s=Math.max(0,Math.floor(s));let h=Math.floor(s/3600),m=Math.floor((s%3600)/60),x=s%60;return [h,m,x].map(v=>String(v).padStart(2,'0')).join(':');}
+function fmtHM(s){let h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return `${h}h ${String(m).padStart(2,'0')}m`;}
+function todayKey(){return new Date().toISOString().slice(0,10);}
+function dateBR(d){return new Date(d).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});}
+
+function renderProducts(){
+ const el=document.getElementById('productList');
+ const counts=active?.items||{};
+ el.innerHTML=db.products.map(p=>`
+ <div class="product">
+  <div><b>${esc(p.name)}</b><div class="muted">${money(p.price)} cada</div></div>
+  <button class="mini secondary" onclick="changeQty('${p.id}',-1)" ${!active?'disabled':''}>−</button>
+  <div class="qty">${counts[p.id]||0}</div>
+  <button class="mini green" onclick="changeQty('${p.id}',1)" ${!active?'disabled':''}>＋</button>
+ </div>`).join('');
+}
+function changeQty(id,n){if(!active)return;active.items[id]=Math.max(0,(active.items[id]||0)+n);persistActive();renderProducts();}
+function showAddProduct(){document.getElementById('addBox').classList.toggle('hidden');}
+function addProduct(){
+ const name=document.getElementById('newProduct').value.trim(), price=Number(document.getElementById('newPrice').value);
+ if(!name)return alert('Digite o nome do produto.');
+ db.products.push({id:crypto.randomUUID(),name,price:isFinite(price)?price:0});save();
+ document.getElementById('newProduct').value='';document.getElementById('newPrice').value='';renderProducts();renderCatalog();
+}
+function startSession(){
+ if(active)return;
+ active={startedAt:Date.now(),pausedAt:null,pausedTotal:0,items:{}};
+ document.getElementById('startBtn').disabled=true;document.getElementById('pauseBtn').disabled=false;document.getElementById('finishBtn').disabled=false;
+ document.getElementById('status').textContent='Venda em andamento';
+ interval=setInterval(updateTimer,500);updateTimer();renderProducts();
+}
+function elapsed(){
+ if(!active)return 0;
+ let end=active.pausedAt||Date.now();
+ return Math.max(0,Math.floor((end-active.startedAt-active.pausedTotal)/1000));
+}
+function persistActive(){if(active){localStorage.setItem('vendasSemaforoActive',JSON.stringify(active));}}
+function restoreActive(){
+ try{
+  const raw=localStorage.getItem('vendasSemaforoActive');
+  if(!raw)return;
+  active=JSON.parse(raw);
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('pauseBtn').disabled=false;
+  document.getElementById('finishBtn').disabled=false;
+  document.getElementById('status').textContent=active.pausedAt?'Venda pausada':'Venda em andamento';
+  document.getElementById('pauseBtn').textContent=active.pausedAt?'▶ Continuar':'Ⅱ Pausar';
+  clearInterval(interval); interval=setInterval(updateTimer,500);
+  updateTimer(); renderProducts();
+ }catch(e){}
+}
+function updateTimer(){document.getElementById('timer').textContent=fmtTime(elapsed());persistActive();}
+function togglePause(){
+ if(!active)return;
+ if(active.pausedAt){
+  active.pausedTotal+=Date.now()-active.pausedAt;
+  active.pausedAt=null;
+  document.getElementById('pauseBtn').textContent='Ⅱ Pausar';
+  document.getElementById('status').textContent='Venda em andamento';
+ }else{
+  active.pausedAt=Date.now();
+  document.getElementById('pauseBtn').textContent='▶ Continuar';
+  document.getElementById('status').textContent='Venda pausada';
+ }
+ persistActive(); updateTimer();
+}
+function finishSession(){
+ if(!active)return;
+ if(!confirm('Finalizar esta sessão de vendas?'))return;
+ const duration=elapsed();
+ const revenue=db.products.reduce((sum,p)=>sum+(active.items[p.id]||0)*Number(p.price||0),0);
+ const items=Object.values(active.items).reduce((a,b)=>a+b,0);
+ db.sessions.unshift({id:crypto.randomUUID(),startedAt:new Date(active.startedAt).toISOString(),duration,items:active.items,revenue,totalItems:items});
+ save();active=null;localStorage.removeItem('vendasSemaforoActive');clearInterval(interval);interval=null;
+ document.getElementById('timer').textContent='00:00:00';document.getElementById('status').textContent='Sessão finalizada e salva';document.getElementById('startBtn').disabled=false;document.getElementById('pauseBtn').disabled=true;document.getElementById('finishBtn').disabled=true;document.getElementById('pauseBtn').textContent='Ⅱ Pausar';
+ renderProducts();renderSummary();renderHistory();
+}
+function renderSummary(){
+ const sessions=db.sessions.filter(s=>s.startedAt.slice(0,10)===todayKey());
+ const rev=sessions.reduce((a,s)=>a+s.revenue,0), secs=sessions.reduce((a,s)=>a+s.duration,0), items=sessions.reduce((a,s)=>a+s.totalItems,0);
+ document.getElementById('todayRevenue').textContent=money(rev);document.getElementById('todayHours').textContent=fmtHM(secs);document.getElementById('todayItems').textContent=items;document.getElementById('todayPerHour').textContent=money(secs?rev/(secs/3600):0);
+}
+function renderHistory(){
+ const el=document.getElementById('historyList');
+ if(!db.sessions.length){el.innerHTML='<div class="empty">Nenhuma sessão registrada ainda.</div>';return;}
+ el.innerHTML=db.sessions.map(s=>{
+  const names=db.products.map(p=>{let q=s.items[p.id]||0;return q?`${esc(p.name)}: ${q}`:null}).filter(Boolean).join(' • ');
+  return `<div class="session"><div class="session-head"><span>${dateBR(s.startedAt)}</span><span>${money(s.revenue)}</span></div><div class="muted">${fmtHM(s.duration)} • ${s.totalItems} produtos • ${money(s.duration?s.revenue/(s.duration/3600):0)}/h</div><div style="font-size:13px;margin-top:5px">${names||'Sem produtos'}</div></div>`;
+ }).join('');
+}
+function renderCatalog(){
+ document.getElementById('catalog').innerHTML=db.products.map(p=>`<div class="product"><div><b>${esc(p.name)}</b><div class="muted">${money(p.price)}</div></div><button class="mini red" onclick="removeProduct('${p.id}')">Excluir</button></div>`).join('');
+}
+function removeProduct(id){
+ if(db.sessions.some(s=>s.items[id])){alert('Esse produto já aparece em uma venda e não pode ser excluído nesta versão.');return;}
+ db.products=db.products.filter(p=>p.id!==id);save();renderProducts();renderCatalog();
+}
+function clearHistory(){if(confirm('Apagar todo o histórico? Esta ação não pode ser desfeita.')){db.sessions=[];save();renderHistory();renderSummary();}}
+function tab(id,btn){document.querySelectorAll('main>section').forEach(x=>x.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');if(id==='history')renderHistory();if(id==='products')renderCatalog();}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+renderProducts();renderSummary();renderHistory();renderCatalog();restoreActive();
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
